@@ -59,10 +59,43 @@ function initialFullBackup() {
         }
 
         // 期間設定
-        const startDate = new Date();
-        startDate.setFullYear(startDate.getFullYear() - 1); // 1年前から
+        const startDate = new Date(2012, 0, 1); // 2012年1月1日から
         const endDate = new Date();
         endDate.setFullYear(endDate.getFullYear() + 1); // 1年後まで
+
+        // 初期設定時の既存データ削除確認
+        const clearResponse = ui.alert(
+            '初期設定確認',
+            '初期設定を実行します。\n\n【重要】既存のバックアップデータの処理方法を選択してください：\n\n「はい」：すべての既存シートを削除して完全に初期化\n「いいえ」：選択したカレンダーのシートのみクリア\n「キャンセル」：処理を中止',
+            ui.ButtonSet.YES_NO_CANCEL
+        );
+        
+        if (clearResponse === ui.Button.CANCEL) return;
+        
+        // 全シート削除が選択された場合
+        if (clearResponse === ui.Button.YES) {
+            const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+            const sheets = spreadsheet.getSheets();
+            
+            // 情報シート以外のすべてのシートを削除
+            sheets.forEach(sheet => {
+                const sheetName = sheet.getName();
+                if (!sheetName.includes('バックアップ情報') && sheetName !== 'シート1') {
+                    spreadsheet.deleteSheet(sheet);
+                }
+            });
+            
+            // 情報シートがある場合はクリア
+            const infoSheet = spreadsheet.getSheetByName('バックアップ情報');
+            if (infoSheet) {
+                const lastRow = infoSheet.getLastRow();
+                if (lastRow > 1) {
+                    infoSheet.getRange(2, 1, lastRow - 1, 4).clear();
+                }
+            }
+            
+            console.log('全シート削除完了');
+        }
 
         // 事前チェック: イベント数推定
         const estimatedEvents = estimateEventCount(calendar, startDate, endDate);
